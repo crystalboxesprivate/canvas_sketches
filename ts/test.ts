@@ -1,11 +1,11 @@
 let cnv = new CNV.Canvas()
+cnv.init('test', 640, 360)
 
 // Reference https://p5js.org/examples/simulate-flocking.html
 function sketch() {
   var flock = new Flock()
 
   function init() {
-    cnv.init('test', 640, 360)
     // Add an initial set of boids into the system
     for (let i = 0; i < 100; i++) {
       let b = new Boid(cnv.width / 2, cnv.height / 2)
@@ -16,37 +16,14 @@ function sketch() {
   function draw() {
     cnv.setBackground(51)
     flock.run()
-    // cnv.fill(255)
-    // cnv.push()
-    // cnv.scale(1 * Math.sin(cnv.time.now * 0.001), 1 * Math.sin(cnv.time.now * 0.001))
-    // cnv.rotate((cnv.time.frameCount * 5 % 360) / 360)
-    // cnv.push()
-    // cnv.translate(100, 100)
-    // // cnv.rect(0, 0, 50, 50)
-    
-    // cnv.beginShape()
-    // cnv.vertex(0, 0);
-    // cnv.vertex(0, 100);
-    // cnv.vertex(100, 0);
-    // cnv.endShape(true)
-    // // cnv.rect(0, 0, 50, 50)
-
-    // cnv.push()
-    // cnv.translate(100, 100)
-    // // cnv.rect(0, 0, 50, 50)
-
-    // cnv.beginShape()
-    // cnv.vertex(0, 0);
-    // cnv.vertex(0, 100);
-    // cnv.vertex(100, 0);
-    // cnv.endShape(true)
-
-    // cnv.pop()
-    // cnv.pop()
-    // cnv.pop()
   }
+
+  function onClick(x:number, y:number) {
+  }
+  
   init()
   cnv.setDrawCallback(draw)
+  cnv.setOnClickCallback(onClick)
   cnv.drawLoop()
 }
 
@@ -66,17 +43,17 @@ class Flock {
 }
 
 class Boid {
-  acceleration: CNV.Vec
-  velocity: CNV.Vec
-  position: CNV.Vec
+  acceleration: CNV.Vector2
+  velocity: CNV.Vector2
+  position: CNV.Vector2
   r: number
   maxspeed: number
   maxforce: number
 
   constructor(x: number, y: number) {
-    this.acceleration = CNV.vec(0, 0)
-    this.velocity = CNV.vec(CNV.nrand(-1, 1), CNV.nrand(-1, 1));
-    this.position = CNV.vec(x, y);
+    this.acceleration = CNV.vec2(0, 0)
+    this.velocity = CNV.vec2(CNV.nrand(-1, 1), CNV.nrand(-1, 1));
+    this.position = CNV.vec2(x, y);
     this.r = 3.0;
     this.maxspeed = 3; // Maximum speed
     this.maxforce = 0.05; // Maximum steering force
@@ -89,7 +66,7 @@ class Boid {
     this.render();
   }
 
-  applyForce(force: CNV.Vec) {
+  applyForce(force: CNV.Vector2) {
     // We could add mass here if we want A = F / M
     this.acceleration.add(force);
   }
@@ -124,13 +101,13 @@ class Boid {
 
   // A method that calculates and applies a steering force towards a target
   // STEER = DESIRED MINUS VELOCITY
-  seek(target: CNV.Vec) {
-    let desired: CNV.Vec = CNV.Vec.sub(target, this.position); // A vector pointing from the location to the target
+  seek(target: CNV.Vector2) {
+    let desired: CNV.Vector2 = CNV.Vector2.sub(target, this.position); // A vector pointing from the location to the target
     // Normalize desired and scale to maximum speed
     desired.normalize();
     desired.mult(this.maxspeed);
     // Steering = Desired minus Velocity
-    let steer = CNV.Vec.sub(desired, this.velocity);
+    let steer = CNV.Vector2.sub(desired, this.velocity);
     steer.limit(this.maxforce); // Limit to maximum steering force
     return steer;
   }
@@ -142,7 +119,7 @@ class Boid {
     cnv.stroke(200);
     cnv.push();
     cnv.translate(this.position.x, this.position.y);
-    // cnv.rotate(CNV.degrees(theta));
+    cnv.rotate(CNV.degrees(theta));
     cnv.beginShape()
     cnv.vertex(0, -this.r * 2);
     cnv.vertex(-this.r, this.r * 2);
@@ -165,15 +142,15 @@ class Boid {
   // Method checks for nearby boids and steers away
   separate(boids: Boid[]) {
     let desiredseparation = 25.0;
-    let steer = CNV.vec(0, 0);
+    let steer = CNV.vec2(0, 0);
     let count = 0;
     // For every boid in the system, check if it's too close
     for (let i = 0; i < boids.length; i++) {
-      let d = CNV.Vec.dist(this.position, boids[i].position);
+      let d = CNV.Vector2.dist(this.position, boids[i].position);
       // If the distance is greater than 0 and less than an arbitrary amount (0 when you are yourself)
       if ((d > 0) && (d < desiredseparation)) {
         // Calculate vector pointing away from neighbor
-        let diff = CNV.Vec.sub(this.position, boids[i].position);
+        let diff = CNV.Vector2.sub(this.position, boids[i].position);
         diff.normalize();
         diff.div(d); // Weight by distance
         steer.add(diff);
@@ -198,10 +175,10 @@ class Boid {
   // For every nearby boid in the system, calculate the average velocity
   align(boids: Boid[]) {
     let neighbordist = 50;
-    let sum = CNV.vec(0, 0);
+    let sum = CNV.vec2(0, 0);
     let count = 0;
     for (let i = 0; i < boids.length; i++) {
-      let d = CNV.Vec.dist(this.position, boids[i].position);
+      let d = CNV.Vector2.dist(this.position, boids[i].position);
       if ((d > 0) && (d < neighbordist)) {
         sum.add(boids[i].velocity);
         count++;
@@ -211,22 +188,22 @@ class Boid {
       sum.div(count);
       sum.normalize();
       sum.mult(this.maxspeed);
-      let steer = CNV.Vec.sub(sum, this.velocity);
+      let steer = CNV.Vector2.sub(sum, this.velocity);
       steer.limit(this.maxforce);
       return steer;
     }
     else {
-      return CNV.vec(0, 0);
+      return CNV.vec2(0, 0);
     }
   }
   // Cohesion
   // For the average location (i.e. center) of all nearby boids, calculate steering vector towards that location
   cohesion(boids: Boid[]) {
     let neighbordist = 50;
-    let sum = CNV.vec(0, 0); // Start with empty vector to accumulate all locations
+    let sum = CNV.vec2(0, 0); // Start with empty vector to accumulate all locations
     let count = 0;
     for (let i = 0; i < boids.length; i++) {
-      let d = CNV.Vec.dist(this.position, boids[i].position);
+      let d = CNV.Vector2.dist(this.position, boids[i].position);
       if ((d > 0) && (d < neighbordist)) {
         sum.add(boids[i].position); // Add location
         count++;
@@ -237,7 +214,7 @@ class Boid {
       return this.seek(sum); // Steer towards the location
     }
     else {
-      return CNV.vec(0, 0);
+      return CNV.vec2(0, 0);
     }
   }
 }
